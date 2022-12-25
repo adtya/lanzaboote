@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use nix::unistd::sync;
 use tempfile::tempdir;
 
-use crate::esp::EspPaths;
+use crate::esp::{EspPaths, EfiFallback};
 use crate::generation::Generation;
 use crate::pe;
 use crate::signature::KeyPair;
@@ -92,7 +92,8 @@ impl Installer {
         let systemd_boot = bootspec
             .toplevel
             .0
-            .join("systemd/lib/systemd/boot/efi/systemd-bootx64.efi");
+            .join("systemd/lib/systemd/boot/efi/")
+            .join(EfiFallback::from_system_double(&bootspec.system).as_systemd_filename());
 
         [
             (&systemd_boot, &esp_paths.efi_fallback),

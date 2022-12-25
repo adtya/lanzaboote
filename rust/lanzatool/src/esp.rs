@@ -3,6 +3,41 @@ use std::path::{Path, PathBuf};
 
 use crate::generation::Generation;
 
+#[allow(dead_code)]
+#[non_exhaustive]
+pub enum EfiFallback {
+    X86,
+    Arm,
+    AArch64
+}
+
+// TODO: rethink the API design
+impl EfiFallback {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::X86 => "BOOTX64.EFI",
+            Self::Arm => "BOOTARM.EFI",
+            Self::AArch64 => "BOOTAA64.EFI"
+        }
+    }
+
+    pub fn as_systemd_filename(&self) -> &'static str {
+        match self {
+            Self::X86 => "systemd-bootx64.efi",
+            Self::Arm => "systemd-bootarm.efi",
+            Self::AArch64 => "systemd-bootaa64.efi"
+        }
+    }
+
+    pub fn from_system_double(system_double: &str) -> Self {
+        match system_double {
+            "x86_64-linux" => Self::X86,
+            "aarch64-linux" => Self::AArch64,
+            _ => unimplemented!()
+        }
+    }
+}
+
 pub struct EspPaths {
     pub esp: PathBuf,
     pub nixos: PathBuf,
@@ -25,6 +60,7 @@ impl EspPaths {
         let esp_efi_fallback_dir = esp.join("EFI/BOOT");
 
         let bootspec = &generation.spec.bootspec;
+        let efi_fallback = EfiFallback::from_system_double(&generation.spec.bootspec.system);
 
         Ok(Self {
             esp: esp.to_path_buf(),
@@ -40,9 +76,9 @@ impl EspPaths {
             linux: esp_linux.clone(),
             lanzaboote_image: esp_linux.join(generation_path(generation)),
             efi_fallback_dir: esp_efi_fallback_dir.clone(),
-            efi_fallback: esp_efi_fallback_dir.join("BOOTX64.EFI"),
+            efi_fallback: esp_efi_fallback_dir.join(efi_fallback.as_str()),
             systemd: esp_systemd.clone(),
-            systemd_boot: esp_systemd.join("systemd-bootx64.efi"),
+            systemd_boot: esp_systemd.join(efi_fallback.as_systemd_filename()),
         })
     }
 }
